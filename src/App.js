@@ -13,11 +13,6 @@ function Game() {
   const { roomId } = useParams();
   const navigate = useNavigate();
 
-  // 🔊 Sounds
-  const drawSound = useRef(new Audio("/sounds/draw.mp3"));
-  const sendSound = useRef(new Audio("/sounds/send.mp3"));
-  const winSound = useRef(new Audio("/sounds/win.mp3"));
-
   const [drawing, setDrawing] = useState(false);
   const [joined, setJoined] = useState(false);
   const [name, setName] = useState("");
@@ -28,24 +23,18 @@ function Game() {
   const [word, setWord] = useState("");
   const [drawer, setDrawer] = useState("");
   const [time, setTime] = useState(60);
-  const [hint, setHint] = useState("");
 
   const [color, setColor] = useState("#000000");
   const [size, setSize] = useState(4);
 
-  const [gameOver, setGameOver] = useState(false);
-  const [finalPlayers, setFinalPlayers] = useState([]);
-  const [typingUser, setTypingUser] = useState("");
-  const [role, setRole] = useState("player");
-
   const isDrawer = socket.id === drawer;
 
-  const drawLine = useCallback((x0, y0, x1, y1, emit, drawColor = color, drawSize = size) => {
+  const drawLine = useCallback((x0, y0, x1, y1, emit, c = color, s = size) => {
     const ctx = ctxRef.current;
     if (!ctx) return;
 
-    ctx.strokeStyle = drawColor;
-    ctx.lineWidth = drawSize;
+    ctx.strokeStyle = c;
+    ctx.lineWidth = s;
     ctx.beginPath();
     ctx.moveTo(x0, y0);
     ctx.lineTo(x1, y1);
@@ -64,29 +53,15 @@ function Game() {
 
     socket.on("draw", d => drawLine(d.x0, d.y0, d.x1, d.y1, false, d.color, d.size));
     socket.on("players", setPlayers);
-    socket.on("message", msg => setMessages(m => [...m, msg]));
+    socket.on("message", m => setMessages(prev => [...prev, m]));
     socket.on("drawer", setDrawer);
     socket.on("word", setWord);
-    socket.on("hint", setHint);
     socket.on("time", setTime);
-    socket.on("role", setRole);
-
-    socket.on("typing", user => {
-      setTypingUser(user);
-      setTimeout(() => setTypingUser(""), 1500);
-    });
-
-    socket.on("gameOver", data => {
-      winSound.current.play();
-      setFinalPlayers(data.sort((a, b) => b.score - a.score));
-      setGameOver(true);
-    });
 
     socket.on("newRound", () => {
       ctxRef.current.clearRect(0, 0, canvas.width, canvas.height);
       setMessages([]);
       setWord("");
-      setHint("");
     });
 
     return () => socket.off();
@@ -101,7 +76,6 @@ function Game() {
 
   const startDrawing = e => {
     if (!isDrawer) return;
-    drawSound.current.play();
     setDrawing(true);
     ctxRef.current.lastX = e.nativeEvent.offsetX;
     ctxRef.current.lastY = e.nativeEvent.offsetY;
@@ -116,36 +90,19 @@ function Game() {
   };
 
   const sendGuess = () => {
-    if (!guess || role === "spectator") return;
-    sendSound.current.play();
+    if (!guess) return;
     socket.emit("guess", guess);
     setGuess("");
   };
 
-  // 🏆 GAME OVER
-  if (gameOver) {
-    return (
-      <div className="join-container">
-        <div className="join-card glass">
-          <h1>🏆 Game Over</h1>
-          <h2>Winner: {finalPlayers[0]?.name}</h2>
-          {finalPlayers.map((p, i) => (
-            <div key={p.id}>{i + 1}. {p.name} — {p.score}</div>
-          ))}
-          <button className="btn" onClick={() => window.location.reload()}>Play Again</button>
-        </div>
-      </div>
-    );
-  }
-
-  // 🎨 JOIN
   if (!joined) {
     return (
       <div className="join-container">
         <div className="join-card glass">
+          <div className="join-title">🎨 Draw & Guess</div>
           <input className="input" placeholder="Name" onChange={e => setName(e.target.value)} />
-          <input className="input" value={room} onChange={e => setRoom(e.target.value)} placeholder="Room" />
-          <button className="btn" onClick={joinRoom}>Join</button>
+          <input className="input" value={room} onChange={e => setRoom(e.target.value)} placeholder="Room Code" />
+          <button className="btn" onClick={joinRoom}>Join Room</button>
         </div>
       </div>
     );
@@ -153,8 +110,9 @@ function Game() {
 
   return (
     <div className="game-layout">
+
       <div className="left-panel glass">
-        <h3>{isDrawer ? `Draw: ${word}` : `Hint: ${hint || "???"}`} ⏱ {time}s</h3>
+        <h3>{isDrawer ? `Draw: ${word}` : "Guess the word"} | ⏱ {time}s</h3>
 
         {isDrawer && (
           <div className="toolbar">
@@ -162,31 +120,54 @@ function Game() {
             🖌 <input type="range" min="2" max="12" value={size} onChange={e => setSize(e.target.value)} />
           </div>
         )}
+      </div>
 
-        <div className="players">
-          {players.map(p => <div key={p.id}>{p.name} — {p.score}</div>)}
+      <div className="center-panel">
+        <div className="canvas-frame">
+          <canvas
+            ref={canvasRef}
+            className="canvas"
+            onMouseDown={startDrawing}
+            onMouseUp={() => setDrawing(false)}
+            onMouseMove={draw}
+            onMouseLeave={() => setDrawing(false)}
+          />
         </div>
       </div>
 
-      <canvas
-        ref={canvasRef}
-        className="canvas"
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={() => setDrawing(false)}
-      />
-
       <div className="right-panel glass">
-        <div className="chat-box">
-          {messages.map((m, i) => (
-            <div key={i}><b>{m.name}</b>: {m.text}</div>
-          ))}
+        <div className="card">
+          <h3>Chat</h3>
+          <div className="chat-box">
+            {messages.map((m, i) => (
+              <div key={i} className="chat-bubble">
+                <b>{m.name}</b>
+                <span>{m.text}</span>
+              </div>
+            ))}
+          </div>
+
+          {!isDrawer && (
+            <>
+              <input className="input" value={guess} onChange={e => setGuess(e.target.value)} />
+              <button className="btn" onClick={sendGuess}>Send</button>
+            </>
+          )}
         </div>
 
-        {typingUser && <div className="typing">✏️ {typingUser} is typing…</div>}
-
-        <input value={guess} onChange={e => setGuess(e.target.value)} />
-        <button onClick={sendGuess}>Send</button>
+        <div className="card">
+          <h3>Players</h3>
+          {players.sort((a,b)=>b.score-a.score).map(p => (
+            <div key={p.id} className={`leaderboard-player ${p.id === drawer ? "drawer-active" : ""}`}>
+              <img src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${p.name}`} alt="" />
+              <div style={{ flex: 1 }}>
+                <b>{p.name}</b>
+                <div style={{ fontSize: "12px", opacity: 0.7 }}>{p.score} pts</div>
+              </div>
+              {p.id === drawer && <span className="turn-badge">DRAWING</span>}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
