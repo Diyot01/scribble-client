@@ -35,7 +35,6 @@ function Game() {
 
   const [gameOver, setGameOver] = useState(false);
   const [finalPlayers, setFinalPlayers] = useState([]);
-
   const [typingUser, setTypingUser] = useState("");
   const [role, setRole] = useState("player");
 
@@ -44,12 +43,14 @@ function Game() {
   const drawLine = useCallback((x0, y0, x1, y1, emit, drawColor = color, drawSize = size) => {
     const ctx = ctxRef.current;
     if (!ctx) return;
+
     ctx.strokeStyle = drawColor;
     ctx.lineWidth = drawSize;
     ctx.beginPath();
     ctx.moveTo(x0, y0);
     ctx.lineTo(x1, y1);
     ctx.stroke();
+
     if (emit) socket.emit("draw", { room, x0, y0, x1, y1, color, size });
   }, [color, size, room]);
 
@@ -92,6 +93,7 @@ function Game() {
   }, [joined, drawLine]);
 
   const joinRoom = () => {
+    if (!name || !room) return;
     socket.emit("joinRoom", { name, room });
     setJoined(true);
     navigate(`/room/${room}`);
@@ -120,6 +122,23 @@ function Game() {
     setGuess("");
   };
 
+  // 🏆 GAME OVER
+  if (gameOver) {
+    return (
+      <div className="join-container">
+        <div className="join-card glass">
+          <h1>🏆 Game Over</h1>
+          <h2>Winner: {finalPlayers[0]?.name}</h2>
+          {finalPlayers.map((p, i) => (
+            <div key={p.id}>{i + 1}. {p.name} — {p.score}</div>
+          ))}
+          <button className="btn" onClick={() => window.location.reload()}>Play Again</button>
+        </div>
+      </div>
+    );
+  }
+
+  // 🎨 JOIN
   if (!joined) {
     return (
       <div className="join-container">
@@ -135,7 +154,7 @@ function Game() {
   return (
     <div className="game-layout">
       <div className="left-panel glass">
-        <h3>{isDrawer ? `Draw: ${word}` : `Hint: ${hint}`} ⏱ {time}s</h3>
+        <h3>{isDrawer ? `Draw: ${word}` : `Hint: ${hint || "???"}`} ⏱ {time}s</h3>
 
         {isDrawer && (
           <div className="toolbar">
@@ -158,8 +177,15 @@ function Game() {
       />
 
       <div className="right-panel glass">
-        {messages.map((m,i)=><div key={i}>{m.name}: {m.text}</div>)}
-        <input value={guess} onChange={e=>setGuess(e.target.value)} />
+        <div className="chat-box">
+          {messages.map((m, i) => (
+            <div key={i}><b>{m.name}</b>: {m.text}</div>
+          ))}
+        </div>
+
+        {typingUser && <div className="typing">✏️ {typingUser} is typing…</div>}
+
+        <input value={guess} onChange={e => setGuess(e.target.value)} />
         <button onClick={sendGuess}>Send</button>
       </div>
     </div>
