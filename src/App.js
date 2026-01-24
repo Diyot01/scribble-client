@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { io } from "socket.io-client";
-import { useParams, useNavigate, Routes, Route } from "react-router-dom";
+import { Routes, Route, useParams, useNavigate } from "react-router-dom";
 import "./App.css";
 
 const socket = io("https://scribble-server-3kgc.onrender.com", {
@@ -13,17 +13,20 @@ function Game() {
   const { roomId } = useParams();
   const navigate = useNavigate();
 
-  const [drawing, setDrawing] = useState(false);
   const [joined, setJoined] = useState(false);
   const [name, setName] = useState("");
   const [room, setRoom] = useState(roomId || "");
+
   const [players, setPlayers] = useState([]);
   const [messages, setMessages] = useState([]);
   const [guess, setGuess] = useState("");
+
   const [word, setWord] = useState("");
+  const [hint, setHint] = useState("");
   const [drawer, setDrawer] = useState("");
   const [time, setTime] = useState(60);
 
+  const [drawing, setDrawing] = useState(false);
   const [color, setColor] = useState("#000000");
   const [size, setSize] = useState(4);
 
@@ -50,19 +53,16 @@ function Game() {
     canvas.width = 900;
     canvas.height = 500;
     ctxRef.current = canvas.getContext("2d");
+    ctxRef.current.lineCap = "round";
 
     socket.on("draw", d => drawLine(d.x0, d.y0, d.x1, d.y1, false, d.color, d.size));
     socket.on("players", setPlayers);
-    socket.on("message", m => setMessages(prev => [...prev, m]));
+    socket.on("message", msg => setMessages(m => [...m, msg]));
     socket.on("drawer", setDrawer);
     socket.on("word", setWord);
+    socket.on("hint", setHint);
     socket.on("time", setTime);
-
-    socket.on("newRound", () => {
-      ctxRef.current.clearRect(0, 0, canvas.width, canvas.height);
-      setMessages([]);
-      setWord("");
-    });
+    socket.on("newRound", () => ctxRef.current.clearRect(0,0,900,500));
 
     return () => socket.off();
   }, [joined, drawLine]);
@@ -99,10 +99,10 @@ function Game() {
     return (
       <div className="join-container">
         <div className="join-card glass">
-          <div className="join-title">🎨 Draw & Guess</div>
+          <div className="join-title">🎨 Scribble</div>
           <input className="input" placeholder="Name" onChange={e => setName(e.target.value)} />
-          <input className="input" value={room} onChange={e => setRoom(e.target.value)} placeholder="Room Code" />
-          <button className="btn" onClick={joinRoom}>Join Room</button>
+          <input className="input" value={room} onChange={e => setRoom(e.target.value)} placeholder="Room" />
+          <button className="btn" onClick={joinRoom}>Join</button>
         </div>
       </div>
     );
@@ -111,35 +111,51 @@ function Game() {
   return (
     <div className="game-layout">
 
+      {/* LEFT PANEL */}
       <div className="left-panel glass">
-        <h3>{isDrawer ? `Draw: ${word}` : "Guess the word"} | ⏱ {time}s</h3>
+        <h3>⏱ {time}s</h3>
+        <h3>{isDrawer ? `Draw: ${word}` : hint}</h3>
 
-        {isDrawer && (
-          <div className="toolbar">
-            🎨 <input type="color" value={color} onChange={e => setColor(e.target.value)} />
-            🖌 <input type="range" min="2" max="12" value={size} onChange={e => setSize(e.target.value)} />
-          </div>
-        )}
+        <div className="players">
+          {players.map(p => (
+            <div key={p.id} className={`leaderboard-player ${p.id === drawer ? "drawer-active" : ""}`}>
+              <img src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${p.name}`} alt="" />
+              <div>
+                <b>{p.name}</b>
+                <div>{p.score} pts</div>
+              </div>
+              {p.id === drawer && <span className="turn-badge">DRAWING</span>}
+            </div>
+          ))}
+        </div>
       </div>
 
+      {/* CENTER */}
       <div className="center-panel">
-        <div className="canvas-frame">
+        {isDrawer && (
+          <div className="toolbar glass">
+            🎨 <input type="color" value={color} onChange={e=>setColor(e.target.value)} />
+            🖌 <input type="range" min="2" max="12" value={size} onChange={e=>setSize(e.target.value)} />
+          </div>
+        )}
+
+        <div className="canvas-frame glass">
           <canvas
             ref={canvasRef}
             className="canvas"
             onMouseDown={startDrawing}
-            onMouseUp={() => setDrawing(false)}
+            onMouseUp={()=>setDrawing(false)}
             onMouseMove={draw}
-            onMouseLeave={() => setDrawing(false)}
           />
         </div>
       </div>
 
+      {/* RIGHT */}
       <div className="right-panel glass">
         <div className="card">
           <h3>Chat</h3>
           <div className="chat-box">
-            {messages.map((m, i) => (
+            {messages.map((m,i)=>(
               <div key={i} className="chat-bubble">
                 <b>{m.name}</b>
                 <span>{m.text}</span>
@@ -149,35 +165,22 @@ function Game() {
 
           {!isDrawer && (
             <>
-              <input className="input" value={guess} onChange={e => setGuess(e.target.value)} />
+              <input className="input" value={guess} onChange={e=>setGuess(e.target.value)} />
               <button className="btn" onClick={sendGuess}>Send</button>
             </>
           )}
         </div>
-
-        <div className="card">
-          <h3>Players</h3>
-          {players.sort((a,b)=>b.score-a.score).map(p => (
-            <div key={p.id} className={`leaderboard-player ${p.id === drawer ? "drawer-active" : ""}`}>
-              <img src={`https://api.dicebear.com/7.x/thumbs/svg?seed=${p.name}`} alt="" />
-              <div style={{ flex: 1 }}>
-                <b>{p.name}</b>
-                <div style={{ fontSize: "12px", opacity: 0.7 }}>{p.score} pts</div>
-              </div>
-              {p.id === drawer && <span className="turn-badge">DRAWING</span>}
-            </div>
-          ))}
-        </div>
       </div>
+
     </div>
   );
 }
 
-export default function App() {
+export default function App(){
   return (
     <Routes>
-      <Route path="/" element={<Game />} />
-      <Route path="/room/:roomId" element={<Game />} />
+      <Route path="/" element={<Game/>}/>
+      <Route path="/room/:roomId" element={<Game/>}/>
     </Routes>
   );
 }
