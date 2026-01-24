@@ -1,11 +1,10 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 import { useParams, useNavigate, Routes, Route } from "react-router-dom";
 
 const socket = io("https://scribble-server-3kgc.onrender.com", {
   transports: ["websocket"]
 });
-
 
 function Game() {
   const canvasRef = useRef(null);
@@ -33,6 +32,23 @@ function Game() {
 
   const isDrawer = socket.id === drawer;
 
+  // 🧠 FIXED: drawLine must be stable
+  const drawLine = useCallback((x0, y0, x1, y1, emit, drawColor = color, drawSize = size) => {
+    const ctx = ctxRef.current;
+    if (!ctx) return;
+
+    ctx.strokeStyle = drawColor;
+    ctx.lineWidth = drawSize;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+
+    if (emit) {
+      socket.emit("draw", { room, x0, y0, x1, y1, color, size });
+    }
+  }, [color, size, room]);
+
   useEffect(() => {
     if (!joined) return;
 
@@ -46,6 +62,7 @@ function Game() {
     socket.on("draw", ({ x0, y0, x1, y1, color, size }) =>
       drawLine(x0, y0, x1, y1, false, color, size)
     );
+
     socket.on("players", setPlayers);
     socket.on("message", msg => setMessages(m => [...m, msg]));
     socket.on("drawer", setDrawer);
@@ -64,7 +81,7 @@ function Game() {
     });
 
     return () => socket.off();
-  }, [joined]);
+  }, [joined, drawLine]);
 
   const joinRoom = () => {
     if (!name || !room) return alert("Enter name and room");
@@ -90,20 +107,6 @@ function Game() {
     drawLine(lastX, lastY, offsetX, offsetY, true);
     ctxRef.current.lastX = offsetX;
     ctxRef.current.lastY = offsetY;
-  };
-
-  const drawLine = (x0, y0, x1, y1, emit, drawColor = color, drawSize = size) => {
-    const ctx = ctxRef.current;
-    ctx.strokeStyle = drawColor;
-    ctx.lineWidth = drawSize;
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1, y1);
-    ctx.stroke();
-
-    if (emit) {
-      socket.emit("draw", { room, x0, y0, x1, y1, color, size });
-    }
   };
 
   const sendGuess = () => {
@@ -137,11 +140,7 @@ function Game() {
         <h1>Join Scribble</h1>
         <input placeholder="Name" onChange={e => setName(e.target.value)} />
         <br /><br />
-        <input
-          placeholder="Room"
-          value={room}
-          onChange={e => setRoom(e.target.value)}
-        />
+        <input value={room} onChange={e => setRoom(e.target.value)} placeholder="Room" />
         <br /><br />
         <button onClick={joinRoom}>Join</button>
       </div>
