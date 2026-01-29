@@ -175,7 +175,16 @@ function Game() {
 
           {!isDrawer && (
             <>
-              <input className="input" value={guess} onChange={e=>setGuess(e.target.value)} />
+              <input
+  className="input"
+  value={guess}
+  onChange={e => setGuess(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      sendGuess();
+      }
+      }}
+      />
               <button className="btn" onClick={sendGuess}>Send</button>
             </>
           )}
