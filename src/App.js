@@ -21,7 +21,7 @@ function Game() {
   const [messages, setMessages] = useState([]);
   const [guess, setGuess] = useState("");
 
-  const [wor, setWord] = useState("");
+  const [word, setWord] = useState("");
   const [hint, setHint] = useState("");
   const [drawer, setDrawer] = useState("");
   const [time, setTime] = useState(60);
@@ -57,7 +57,7 @@ function Game() {
 
     socket.on("draw", d => drawLine(d.x0, d.y0, d.x1, d.y1, false, d.color, d.size));
     socket.on("players", setPlayers);
-    socketd.on("message", msg => setMessages(m => [...m, msg]));
+    socket.on("message", msg => setMessages(m => [...m, msg]));
     socket.on("drawer", setDrawer);
     socket.on("word", setWord);
     socket.on("hint", setHint);
@@ -95,51 +95,35 @@ function Game() {
     setGuess("");
   };
 
-if (!joined) {
-  return (
-    <div className="login-body">
-      <div className="login-bg">
+  if (!joined) {
+    return (
+      <div className="login-body">
+        <div className="login-bg">
+          <img src="/logo.png" className="login-logo" alt="Draw n Guess" />
 
-        <img src="/logo.png" className="login-logo" alt="Draw n Guess" />
+          <div className="login-card glass">
+            <h2>Login Page</h2>
 
-        <div className="login-card glass">
-          <h2>Login Page</h2>
+            <div className="input-box">
+              <span>👤</span>
+              <input placeholder="Enter your username..." onChange={e => setName(e.target.value)} />
+            </div>
 
-          <div className="input-box">
-            <span>👤</span>
-            <input
-              placeholder="Enter your username..."
-              onChange={e => setName(e.target.value)}
-            />
+            <div className="input-box">
+              <span>#</span>
+              <input value={room} onChange={e => setRoom(e.target.value)} placeholder="Enter room code..." />
+            </div>
+
+            <button className="join-btn" onClick={joinRoom}>Join Room</button>
+            <p className="login-hint">Enter a username and room code to join the game!</p>
           </div>
-
-          <div className="input-box">
-            <span>#</span>
-            <input
-              value={room}
-              onChange={e => setRoom(e.target.value)}
-              placeholder="Enter room code..."
-            />
-          </div>
-
-          <button className="join-btn" onClick={joinRoom}>
-            Join Room
-          </button>
-
-          <p className="login-hint">
-            Enter a username and room code to join the game!
-          </p>
         </div>
       </div>
-    </div>
-  );
-}
-
+    );
+  }
 
   return (
     <div className="game-layout">
-
-      {/* LEFT PANEL */}
       <div className="left-panel glass">
         <h3>⏱ {time}s</h3>
         <h3>{isDrawer ? `Draw: ${word}` : hint}</h3>
@@ -158,7 +142,6 @@ if (!joined) {
         </div>
       </div>
 
-      {/* CENTER */}
       <div className="center-panel">
         {isDrawer && (
           <div className="toolbar glass">
@@ -178,7 +161,6 @@ if (!joined) {
         </div>
       </div>
 
-      {/* RIGHT */}
       <div className="right-panel glass">
         <div className="card">
           <h3>Chat</h3>
@@ -199,7 +181,6 @@ if (!joined) {
           )}
         </div>
       </div>
-
     </div>
   );
 }
