@@ -251,3 +251,88 @@ body {
   opacity: 0.6;
   margin-top: 5px;
 }
+/* ===== LOGIN SCREEN (IMAGE STYLE) ===== */
+
+.login-body {
+  height: 100vh;
+  width: 100%;
+  background: url(../public/bg.png) no-repeat center center;
+  background-size: cover;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-bg {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-logo {
+  width: 280px;
+  margin-bottom: 25px;
+}
+
+.login-card {
+  width: 340px;
+  padding: 28px;
+  text-align: center;
+  color: white;
+}
+
+.login-card h2 {
+  margin-bottom: 18px;
+  font-weight: 600;
+}
+
+.input-box {
+  display: flex;
+  align-items: center;
+  background: rgba(0,0,0,0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.input-box span {
+  color: #ffcc70;
+  margin-right: 8px;
+}
+
+.input-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  width: 100%;
+  font-size: 14px;
+}
+
+.join-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: none;
+  font-size: 15px;
+  font-weight: bold;
+  color: #222;
+  background: linear-gradient(135deg,#ffd452,#ffb703);
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.join-btn:hover {
+  transform: scale(1.04);
+}
+
+.login-hint {
+  margin-top: 12px;
+  font-size: 12px;
+  opacity: 0.7;
+}

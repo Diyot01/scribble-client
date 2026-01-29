@@ -21,7 +21,7 @@ function Game() {
   const [messages, setMessages] = useState([]);
   const [guess, setGuess] = useState("");
 
-  const [word, setWord] = useState("");
+  const [wor, setWord] = useState("");
   const [hint, setHint] = useState("");
   const [drawer, setDrawer] = useState("");
   const [time, setTime] = useState(60);
@@ -57,7 +57,7 @@ function Game() {
 
     socket.on("draw", d => drawLine(d.x0, d.y0, d.x1, d.y1, false, d.color, d.size));
     socket.on("players", setPlayers);
-    socket.on("message", msg => setMessages(m => [...m, msg]));
+    socketd.on("message", msg => setMessages(m => [...m, msg]));
     socket.on("drawer", setDrawer);
     socket.on("word", setWord);
     socket.on("hint", setHint);
@@ -95,18 +95,46 @@ function Game() {
     setGuess("");
   };
 
-  if (!joined) {
-    return (
-      <div className="join-container">
-        <div className="join-card glass">
-          <div className="join-title">🎨 Scribble</div>
-          <input className="input" placeholder="Name" onChange={e => setName(e.target.value)} />
-          <input className="input" value={room} onChange={e => setRoom(e.target.value)} placeholder="Room" />
-          <button className="btn" onClick={joinRoom}>Join</button>
+if (!joined) {
+  return (
+    <div className="login-body">
+      <div className="login-bg">
+
+        <img src="/logo.png" className="login-logo" alt="Draw n Guess" />
+
+        <div className="login-card glass">
+          <h2>Login Page</h2>
+
+          <div className="input-box">
+            <span>👤</span>
+            <input
+              placeholder="Enter your username..."
+              onChange={e => setName(e.target.value)}
+            />
+          </div>
+
+          <div className="input-box">
+            <span>#</span>
+            <input
+              value={room}
+              onChange={e => setRoom(e.target.value)}
+              placeholder="Enter room code..."
+            />
+          </div>
+
+          <button className="join-btn" onClick={joinRoom}>
+            Join Room
+          </button>
+
+          <p className="login-hint">
+            Enter a username and room code to join the game!
+          </p>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
 
   return (
     <div className="game-layout">
